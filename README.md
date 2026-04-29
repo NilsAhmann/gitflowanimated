@@ -1,3 +1,6 @@
+Upgraded to Node.js 24
+
+
 An experimental React app to visualize and animate Gitflow.
 
 ## Requirements
