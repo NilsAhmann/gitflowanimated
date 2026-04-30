@@ -2,9 +2,7 @@ import React, { Component } from "react";
 import styled from "styled-components";
 import GitFlow from "./gitflow";
 import shortid from "shortid";
-
-const DEVELOP = "develop";
-const MASTER = "master";
+import { BRANCH_CONFIG, BRANCH_TYPES, createBranchLabel } from "./branch-config";
 
 const masterID = shortid.generate();
 const developID = shortid.generate();
@@ -28,16 +26,18 @@ const seedData = () => {
   return {
     branches: [
       {
-        name: MASTER,
+        type: BRANCH_TYPES.MASTER,
+        name: BRANCH_CONFIG[BRANCH_TYPES.MASTER].label,
         id: masterID,
         canCommit: false,
-        color: "#E040FB",
+        color: BRANCH_CONFIG[BRANCH_TYPES.MASTER].color,
       },
       {
-        name: DEVELOP,
+        type: BRANCH_TYPES.DEVELOP,
+        name: BRANCH_CONFIG[BRANCH_TYPES.DEVELOP].label,
         id: developID,
         canCommit: true,
-        color: "#FF8A65",
+        color: BRANCH_CONFIG[BRANCH_TYPES.DEVELOP].color,
       },
     ],
     commits,
@@ -79,17 +79,17 @@ class App extends Component {
     const { project } = this.state;
     const branches = [...project.branches];
     const commits = [...project.commits];
-    const featureBranches = branches.filter((branch) => branch.featureBranch);
-    const featureBranchName = "feature " + ((featureBranches || []).length + 1);
+    const featureBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.FEATURE);
+    const featureBranchName = createBranchLabel(BRANCH_TYPES.FEATURE, featureBranches.length + 1);
     const developCommits = commits.filter((commit) => commit.branch === developID);
     const lastDevelopCommit = developCommits[developCommits.length - 1];
     const featureOffset = lastDevelopCommit.gridIndex + 1;
     const newBranch = {
       id: shortid.generate(),
+      type: BRANCH_TYPES.FEATURE,
       name: featureBranchName,
-      featureBranch: true,
       canCommit: true,
-      color: "#64B5F6",
+      color: BRANCH_CONFIG[BRANCH_TYPES.FEATURE].color,
     };
     const newCommit = {
       id: shortid.generate(),
@@ -113,18 +113,18 @@ class App extends Component {
     const { project } = this.state;
     const branches = [...project.branches];
     const commits = [...project.commits];
-    const hotFixBranches = branches.filter((branch) => branch.hotFixBranch);
-    const hotFixBranchName = "hot " + ((hotFixBranches || []).length + 1);
+    const hotFixBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.HOTFIX);
+    const hotFixBranchName = createBranchLabel(BRANCH_TYPES.HOTFIX, hotFixBranches.length + 1);
     const masterCommits = commits.filter((commit) => commit.branch === masterID);
     const lastMasterCommit = masterCommits[masterCommits.length - 1];
     const hotFixOffset = lastMasterCommit.gridIndex + 1;
 
     const newBranch = {
       id: shortid.generate(),
+      type: BRANCH_TYPES.HOTFIX,
       name: hotFixBranchName,
-      hotFixBranch: true,
       canCommit: true,
-      color: "#ff1744",
+      color: BRANCH_CONFIG[BRANCH_TYPES.HOTFIX].color,
     };
     const newCommit = {
       id: shortid.generate(),
@@ -148,17 +148,17 @@ class App extends Component {
     const { project } = this.state;
     const branches = [...project.branches];
     const commits = [...project.commits];
-    const releaseBranches = branches.filter((branch) => branch.releaseBranch);
-    const releaseBranchName = "release " + ((releaseBranches || []).length + 1);
+    const releaseBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.RELEASE);
+    const releaseBranchName = createBranchLabel(BRANCH_TYPES.RELEASE, releaseBranches.length + 1);
     const developCommits = commits.filter((commit) => commit.branch === developID);
     const lastDevelopCommit = developCommits[developCommits.length - 1];
     const releaseOffset = lastDevelopCommit.gridIndex + 1;
     const newBranch = {
       id: shortid.generate(),
+      type: BRANCH_TYPES.RELEASE,
       name: releaseBranchName,
-      releaseBranch: true,
       canCommit: true,
-      color: "#B2FF59",
+      color: BRANCH_CONFIG[BRANCH_TYPES.RELEASE].color,
     };
     const newCommit = {
       id: shortid.generate(),

@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { Button, ButtonIcon, fallDownAnimation, fadeIn } from "./global-styles";
 import GoeyFilter from "./goey-filter";
 import Connections from "./connections";
+import { BRANCH_TYPES } from "./branch-config";
 
 const COLUMN_WIDTH = 90;
 const ROW_HEIGHT = 45;
@@ -266,7 +267,7 @@ class GitFlow extends Component {
   renderBranchCommit = (branch, gridHeight) => {
     const { commits } = this.props.project;
     const branchCommits = commits.filter((commit) => commit.branch === branch.id);
-    const isMasterBranch = branch.name === "master";
+    const isMasterBranch = branch.type === BRANCH_TYPES.MASTER;
 
     return (
       <Commits
@@ -292,11 +293,11 @@ class GitFlow extends Component {
   render() {
     const { project } = this.props;
     const { branches } = project;
-    const masterBranch = branches.find((branch) => branch.name === "master");
-    const hotFixBranches = branches.filter((branch) => branch.hotFixBranch);
-    const developBranch = branches.find((branch) => branch.name === "develop");
-    const releaseBranches = branches.filter((branch) => branch.releaseBranch);
-    const featureBranches = branches.filter((branch) => branch.featureBranch);
+    const masterBranch = branches.find((branch) => branch.type === BRANCH_TYPES.MASTER);
+    const hotFixBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.HOTFIX);
+    const developBranch = branches.find((branch) => branch.type === BRANCH_TYPES.DEVELOP);
+    const releaseBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.RELEASE);
+    const featureBranches = branches.filter((branch) => branch.type === BRANCH_TYPES.FEATURE);
     const noOfBranches = branches.length;
     const orderedBranches = [
       masterBranch,
