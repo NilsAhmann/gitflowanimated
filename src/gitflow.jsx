@@ -4,6 +4,10 @@ import { Button, ButtonIcon, fallDownAnimation, fadeIn } from "./global-styles";
 import GoeyFilter from "./goey-filter";
 import Connections from "./connections";
 
+const COLUMN_WIDTH = 90;
+const ROW_HEIGHT = 45;
+const MIN_GRAPH_HEIGHT = 800;
+
 const GitFlowElm = styled.div`
   margin: 0 auto;
 `;
@@ -29,7 +33,7 @@ const ProjectElm = styled.div`
 const GridColumn = styled.div`
   position: relative;
   display: grid;
-  grid-template-columns: ${(props) => `repeat(${props.count || 2}, 90px)`};
+  grid-template-columns: ${(props) => `repeat(${props.count || 2}, ${COLUMN_WIDTH}px)`};
 `;
 
 const BranchHeader = styled.div`
@@ -113,67 +117,57 @@ const ConnectionsContainer = styled.div`
 `;
 
 class GitFlow extends Component {
-  commitPositions = {};
-  lastPathsSnapshot = "";
-
-  state = {
-    paths: [],
-  };
-
-  componentDidMount() {
-    this.updateConnections();
-  }
-
-  componentDidUpdate() {
-    this.updateConnections();
-  }
-
-  storeCommitPosition = (id, offset = 0, commitElm) => {
-    if (!commitElm) {
-      return;
-    }
-
-    this.commitPositions[id] = {
-      top: commitElm.offsetTop,
-      left: (offset * 90) + commitElm.offsetLeft,
-    };
-  };
-
-  updateConnections = () => {
-    const { commits } = this.props.project;
-    const paths = commits
-      .map((commit) => {
-        const targetPosition = this.commitPositions[commit.id];
-
-        return (commit.parents || []).map((parentId) => ({
-          srcCommitID: parentId,
-          tgtCommitID: commit.id,
-          src: this.commitPositions[parentId],
-          tgt: targetPosition,
-        }));
-      })
-      .reduce((allPaths, pathGroup) => allPaths.concat(pathGroup), [])
-      .filter((path) => path.src && path.tgt);
-
-    const snapshot = JSON.stringify(paths);
-
-    if (snapshot !== this.lastPathsSnapshot) {
-      this.lastPathsSnapshot = snapshot;
-      this.setState({ paths });
-    }
-  };
-
   deleteBranch = (branchID) => {
-    const { commits } = this.props.project;
-    const commitIdsToDelete = commits
-      .filter((commit) => commit.branch === branchID)
-      .map((commit) => commit.id);
-
-    commitIdsToDelete.forEach((commitId) => {
-      delete this.commitPositions[commitId];
-    });
-
     this.props.onDeleteBranch(branchID);
+  };
+
+  getBranchPositionMap = (branches) =>
+    branches.reduce((branchPositions, branch, index) => {
+      branchPositions[branch.id] = index;
+      return branchPositions;
+    }, {});
+
+  getCommitPosition = (commit, branchPositions) => ({
+    top: (commit.gridIndex - 1) * ROW_HEIGHT,
+    left: (branchPositions[commit.branch] * COLUMN_WIDTH) + (COLUMN_WIDTH / 2),
+  });
+
+  sortBranchesByLatestCommit = (branches, commits) => {
+    const latestCommitByBranch = commits.reduce((latestCommitIndex, commit) => {
+      latestCommitIndex[commit.branch] = Math.max(latestCommitIndex[commit.branch] || 0, commit.gridIndex);
+      return latestCommitIndex;
+    }, {});
+
+    return [...branches].sort(
+      (leftBranch, rightBranch) =>
+        (latestCommitByBranch[rightBranch.id] || 0) - (latestCommitByBranch[leftBranch.id] || 0)
+    );
+  };
+
+  buildPaths = (commits, branchPositions) => {
+    const commitsById = commits.reduce((index, commit) => {
+      index[commit.id] = commit;
+      return index;
+    }, {});
+
+    return commits.flatMap((commit) =>
+      (commit.parents || [])
+        .map((parentId) => {
+          const parentCommit = commitsById[parentId];
+
+          if (!parentCommit) {
+            return null;
+          }
+
+          return {
+            srcCommitID: parentId,
+            tgtCommitID: commit.id,
+            src: this.getCommitPosition(parentCommit, branchPositions),
+            tgt: this.getCommitPosition(commit, branchPositions),
+          };
+        })
+        .filter(Boolean)
+    );
   };
 
   renderCommitButton = (branch) => (
@@ -265,33 +259,23 @@ class GitFlow extends Component {
 
   renderBranchCommits = (params) => {
     const {
-      masterBranch,
-      developBranch,
-      releaseBranches,
-      featureBranches,
-      hotFixBranches,
+      branches,
       noOfBranches,
+      paths,
+      gridHeight,
     } = params;
-
-    const branches = [
-      masterBranch,
-      ...hotFixBranches,
-      ...releaseBranches,
-      developBranch,
-      ...featureBranches,
-    ];
 
     return (
       <GridColumn count={noOfBranches}>
         <ConnectionsContainer>
-          <Connections paths={this.state.paths} />
+          <Connections paths={paths} />
         </ConnectionsContainer>
-        {branches.map((branch, index) => this.renderBranchCommit(branch, index))}
+        {branches.map((branch) => this.renderBranchCommit(branch, gridHeight))}
       </GridColumn>
     );
   };
 
-  renderBranchCommit = (branch, branchIndex) => {
+  renderBranchCommit = (branch, gridHeight) => {
     const { commits } = this.props.project;
     const branchCommits = commits.filter((commit) => commit.branch === branch.id);
     const isMasterBranch = branch.name === "master";
@@ -301,12 +285,11 @@ class GitFlow extends Component {
         className={branch.merged ? "merged" : ""}
         color={branch.color}
         key={`branch-${branch.id}`}
-        height={`${branchCommits.length * 45}px`}
+        height={`${gridHeight}px`}
       >
         {branchCommits.map((commit, idx) => (
           <Commit
             className={branch.merged ? "merged" : ""}
-            ref={this.storeCommitPosition.bind(this, commit.id, branchIndex)}
             key={`commit-${commit.id}`}
             color={branch.color}
             top={commit.gridIndex - 1}
@@ -325,15 +308,35 @@ class GitFlow extends Component {
     const hotFixBranches = branches.filter((branch) => branch.hotFixBranch);
     const developBranch = branches.find((branch) => branch.name === "develop");
     const releaseBranches = branches.filter((branch) => branch.releaseBranch);
-    const featureBranches = branches.filter((branch) => branch.featureBranch);
+    const featureBranches = this.sortBranchesByLatestCommit(
+      branches.filter((branch) => branch.featureBranch),
+      project.commits
+    );
     const noOfBranches = branches.length;
+    const orderedBranches = [
+      masterBranch,
+      ...hotFixBranches,
+      ...releaseBranches,
+      developBranch,
+      ...featureBranches,
+    ];
+    const branchPositions = this.getBranchPositionMap(orderedBranches);
+    const maxGridIndex = project.commits.reduce(
+      (highestGridIndex, commit) => Math.max(highestGridIndex, commit.gridIndex),
+      1
+    );
+    const gridHeight = Math.max(MIN_GRAPH_HEIGHT, (maxGridIndex * ROW_HEIGHT) + 25);
+    const paths = this.buildPaths(project.commits, branchPositions);
     const params = {
       masterBranch,
       hotFixBranches,
       developBranch,
       featureBranches,
       releaseBranches,
+      branches: orderedBranches,
       noOfBranches,
+      gridHeight,
+      paths,
     };
 
     return (
