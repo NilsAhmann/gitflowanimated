@@ -132,18 +132,6 @@ class GitFlow extends Component {
     left: (branchPositions[commit.branch] * COLUMN_WIDTH) + (COLUMN_WIDTH / 2),
   });
 
-  sortBranchesByLatestCommit = (branches, commits) => {
-    const latestCommitByBranch = commits.reduce((latestCommitIndex, commit) => {
-      latestCommitIndex[commit.branch] = Math.max(latestCommitIndex[commit.branch] || 0, commit.gridIndex);
-      return latestCommitIndex;
-    }, {});
-
-    return [...branches].sort(
-      (leftBranch, rightBranch) =>
-        (latestCommitByBranch[rightBranch.id] || 0) - (latestCommitByBranch[leftBranch.id] || 0)
-    );
-  };
-
   buildPaths = (commits, branchPositions) => {
     const commitsById = commits.reduce((index, commit) => {
       index[commit.id] = commit;
@@ -308,10 +296,7 @@ class GitFlow extends Component {
     const hotFixBranches = branches.filter((branch) => branch.hotFixBranch);
     const developBranch = branches.find((branch) => branch.name === "develop");
     const releaseBranches = branches.filter((branch) => branch.releaseBranch);
-    const featureBranches = this.sortBranchesByLatestCommit(
-      branches.filter((branch) => branch.featureBranch),
-      project.commits
-    );
+    const featureBranches = branches.filter((branch) => branch.featureBranch);
     const noOfBranches = branches.length;
     const orderedBranches = [
       masterBranch,

@@ -17,14 +17,14 @@ const draw = keyframes`
 `;
 
 const AnimatedLine = styled.line`
-  stroke-dasharray: 500;
-  stroke-dashoffset: 500;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: ${draw} 2s linear forwards;
 `;
 
 const AnimatedPath = styled.path`
-  stroke-dasharray: 500;
-  stroke-dashoffset: 500;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: ${draw} 2s linear forwards;
 `;
 
@@ -43,6 +43,7 @@ class Connections extends Component {
             return (
               <AnimatedLine
                 key={`p${src.left}-${src.top}-${idx}`}
+                pathLength={1}
                 x1={src.left}
                 y1={src.top + 25}
                 x2={tgt.left}
@@ -100,6 +101,7 @@ class Connections extends Component {
           return (
             <AnimatedPath
               key={`p${src.left}-${src.top}-${idx}`}
+              pathLength={1}
               d={pathStr}
               fill="none"
               stroke={LINE_COLOR}
